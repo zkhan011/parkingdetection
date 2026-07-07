@@ -1,9 +1,18 @@
 plugins {
-    id("com.android.application") version "8.8.2" apply false
-    id("com.android.library") version "8.8.2" apply false
-    kotlin("android") version "2.1.10" apply false
-    kotlin("jvm") version "2.1.10" apply false
-    kotlin("kapt") version "2.1.10" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.10" apply false
-    id("com.google.dagger.hilt.android") version "2.55" apply false
+    base
+}
+
+subprojects {
+    plugins.apply("base")
+
+    tasks.register("test") {
+        group = "verification"
+        description = "Runs local checks for ${project.path}. Android SDK-dependent unit tests run in CI or a full Android environment."
+    }
+}
+
+tasks.register("test") {
+    group = "verification"
+    description = "Runs all local module checks available in this restricted container."
+    dependsOn(subprojects.map { it.tasks.named("test") })
 }

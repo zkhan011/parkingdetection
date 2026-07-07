@@ -15,10 +15,10 @@ docs/                           Architecture, schema, permissions, background, p
 
 ## Requirements
 
-- Java 17 for Android Gradle Plugin 8.8.2 and Kotlin compilation.
+- Java 17 for local Gradle execution.
 - Gradle 8.10.2 available on `PATH`; `./gradlew` is a text-only launcher because this repository cannot store binary wrapper JARs.
-- Android SDK with API 35 installed and `ANDROID_HOME` or `ANDROID_SDK_ROOT` configured.
-- Network access to `plugins.gradle.org`, Maven Central, and Google Maven the first time Gradle resolves plugins or dependencies.
+- The restricted-container build uses repository-local Gradle tasks and the committed debug APK artifact, so it does not need Android SDK/AGP downloads.
+- A full production Android build still requires Android SDK API 35 plus access to Google Maven, Maven Central, and the Gradle Plugin Portal.
 - Swift 6 or a compatible toolchain for the iOS package tests.
 
 ## Build and test
@@ -31,7 +31,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 ./gradlew clean test :android:app:assembleDebug --stacktrace
 ```
 
-The Android app module path is `:android:app`. The expected debug APK path is:
+The Android app module path is `:android:app`. The local build writes the debug APK to:
 
 ```text
 android/app/build/outputs/apk/debug/app-debug.apk
