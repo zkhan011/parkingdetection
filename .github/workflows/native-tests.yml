@@ -1,0 +1,51 @@
+name: Native Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - work
+
+jobs:
+  android-domain-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Make Gradle launcher executable
+        run: chmod +x ./gradlew
+
+      - name: Run Android domain tests
+        run: ./gradlew :android:domain:test --no-daemon --stacktrace
+
+      - name: Upload Android test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-domain-test-results
+          path: |
+            android/domain/build/reports/tests/
+            android/domain/build/test-results/
+          if-no-files-found: warn
+
+  ios-core-tests:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Swift tests
+        working-directory: ios/ParkingDetection
+        run: swift test
