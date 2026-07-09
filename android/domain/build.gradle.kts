@@ -1,9 +1,15 @@
 plugins {
-    base
+    kotlin("jvm")
 }
 
-tasks.named("test") {
-    doLast {
-        println("Domain source tests are preserved under src/test; Kotlin plugin dependency execution is disabled in this restricted container.")
-    }
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    testImplementation(kotlin("test"))
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }

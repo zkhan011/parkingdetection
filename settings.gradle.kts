@@ -15,6 +15,13 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ParkingDetection"
-include(":android:app")
-include(":android:data")
+
+include(":android")
 include(":android:domain")
+include(":android:data")
+include(":android:app")
+
+project(":android").projectDir = file("android")
+project(":android:domain").projectDir = file("android/domain")
+project(":android:data").projectDir = file("android/data")
+project(":android:app").projectDir = file("android/app")
