@@ -1,0 +1,15 @@
+.gradle/
+build/
+**/build/
+**/.build/
+DerivedData/
+*.xcuserdata/
+local.properties
+.DS_Store
+# Generated local APK artifacts
+downloads/*.apk
+downloads/.apk-work/
+artifacts/*.zip
+artifacts/*.apk
+artifacts/SHA256SUMS.txt
+artifacts/README.txt
