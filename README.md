@@ -25,7 +25,7 @@ Root project 'ParkingDetection'
 ## Required versions
 
 - Java 17.
-- Gradle 8.10.2 available on PATH or via GRADLE_HOME. This repository uses a text-only `./gradlew` launcher because the PR system rejects binary files such as `gradle-wrapper.jar`.
+- Gradle 8.10.2. The text-only `./gradlew` bootstrapper downloads Gradle 8.10.2 into `.gradle/bootstrap` when `GRADLE_HOME` is not set, and falls back to `gradle` on `PATH` if the download is blocked, because the PR system rejects binary files such as `gradle-wrapper.jar`.
 - Android Gradle Plugin 8.8.2.
 - Kotlin 2.1.10.
 - Android SDK platform `android-35` and Build Tools `35.0.0`.
@@ -97,7 +97,7 @@ Android background execution is restricted by OS version, battery mode, and perm
 
 ## Troubleshooting
 
-- `./gradlew --version` fails: install Gradle 8.10.2, set `GRADLE_HOME`, or use CI `gradle/actions/setup-gradle`; binary `gradle-wrapper.jar` is intentionally not committed because this PR system rejects binary files.
+- `./gradlew --version` fails: ensure `curl` or `wget` and `unzip` are installed, allow access to `services.gradle.org`, set `GRADLE_HOME` to an existing Gradle 8.10.2 installation, or install Gradle on `PATH` for fallback execution. Binary `gradle-wrapper.jar` is intentionally not committed because this PR system rejects binary files.
 - Plugin resolution fails: verify access to Google Maven, Maven Central, and Gradle Plugin Portal.
 - Android SDK not found: set `ANDROID_HOME` or `ANDROID_SDK_ROOT`, then install `platforms;android-35` and `build-tools;35.0.0`.
 - Wrong Java version: use Java 17 and make sure `java -version` reports 17.
