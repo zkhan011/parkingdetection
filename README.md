@@ -24,7 +24,7 @@ Root project 'ParkingDetection'
 
 ## Required versions
 
-- Java 17.
+- Java 21.
 - Gradle 8.10.2. The text-only `./gradlew` bootstrapper downloads Gradle 8.10.2 into `.gradle/bootstrap` when `GRADLE_HOME` is not set, and falls back to `gradle` on `PATH` if the download is blocked, because the PR system rejects binary files such as `gradle-wrapper.jar`.
 - Android Gradle Plugin 8.8.2.
 - Kotlin 2.1.10.
@@ -37,7 +37,7 @@ Root project 'ParkingDetection'
 git clone https://github.com/zkhan011/parkingdetection.git
 cd parkingdetection
 chmod +x gradlew devandroid.sh
-export JAVA_HOME=/path/to/jdk17
+export JAVA_HOME=/path/to/jdk21
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 ./gradlew --version
@@ -100,7 +100,7 @@ Android background execution is restricted by OS version, battery mode, and perm
 - `./gradlew --version` fails: ensure `curl` or `wget` and `unzip` are installed, allow access to `services.gradle.org`, set `GRADLE_HOME` to an existing Gradle 8.10.2 installation, or install Gradle on `PATH` for fallback execution. Binary `gradle-wrapper.jar` is intentionally not committed because this PR system rejects binary files.
 - Plugin resolution fails: verify access to Google Maven, Maven Central, and Gradle Plugin Portal.
 - Android SDK not found: set `ANDROID_HOME` or `ANDROID_SDK_ROOT`, then install `platforms;android-35` and `build-tools;35.0.0`.
-- Wrong Java version: use Java 17 and make sure `java -version` reports 17.
+- Wrong Java version: use Java 21 and make sure `java -version` reports 21.
 - Device install fails: run `adb devices`, enable USB debugging, and accept the device authorization prompt.
 
 ## iOS tests

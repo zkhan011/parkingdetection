@@ -62,15 +62,15 @@ cd "${REPO_DIR}"
 
 log "Checking required tools"
 have git || fail "git is required"
-have java || fail "Java 17 is required"
+have java || fail "Java 21 is required"
 have unzip || fail "unzip is required"
 have zip || fail "zip is required"
 
-if [[ -d "${HOME}/.local/share/mise/installs/java/17.0.2" ]]; then
-  export JAVA_HOME="${HOME}/.local/share/mise/installs/java/17.0.2"
+if [[ -d "${HOME}/.local/share/mise/installs/java/21.0.2" ]]; then
+  export JAVA_HOME="${HOME}/.local/share/mise/installs/java/21.0.2"
   export PATH="${JAVA_HOME}/bin:${PATH}"
 elif [[ -z "${JAVA_HOME:-}" ]]; then
-  warn "JAVA_HOME is not set. Java 17 is required."
+  warn "JAVA_HOME is not set. Java 21 is required."
 fi
 
 log "Checking Android SDK"
