@@ -9,6 +9,7 @@ import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,15 +23,21 @@ class FusedLocationProvider @Inject constructor(
 
     @SuppressLint("MissingPermission")
     override suspend fun currentHighAccuracyLocation(): AppLocation? {
-        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!hasFine && !hasCoarse) return null
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasFineLocation) return null
+
         val request = CurrentLocationRequest.Builder()
-            .setPriority(if (hasFine) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY)
-            .setGranularity(if (hasFine) Granularity.GRANULARITY_FINE else Granularity.GRANULARITY_COARSE)
-            .setMaxUpdateAgeMillis(30_000)
+            .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+            .setGranularity(Granularity.GRANULARITY_FINE)
+            .setMaxUpdateAgeMillis(0)
+            .setDurationMillis(20_000)
+            .setWaitForAccurateLocation(true)
             .build()
-        return client.getCurrentLocation(request, null).await()?.let {
+        val cancellationToken = CancellationTokenSource()
+        return client.getCurrentLocation(request, cancellationToken.token).await()?.let {
             AppLocation(it.latitude, it.longitude, it.accuracy, it.speed)
         }
     }

@@ -2,6 +2,11 @@ package com.zishan.parkingdetection.ui
 
 import android.Manifest
 import android.os.Build
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,6 +66,21 @@ fun HomeScreen(
     onPermissions: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val preciseLocationPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) viewModel.saveManualParking()
+        else viewModel.onPreciseLocationPermissionDenied()
+    }
+    val saveParking = {
+        val hasPreciseLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPreciseLocation) viewModel.saveManualParking()
+        else preciseLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
     Scaffold(topBar = { TopAppBar(title = { Text("Parking Detection") }) }) { padding ->
         LazyColumn(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -75,7 +95,16 @@ fun HomeScreen(
             }
             item { ParkingDetailsCard(state, viewModel) }
             item {
-                Button(onClick = viewModel::saveManualParking, modifier = Modifier.fillMaxWidth()) { Text("Save Parking Location") }
+                Button(
+                    onClick = saveParking,
+                    enabled = !state.isSavingManualParking,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (state.isSavingManualParking) "Getting precise location…" else "Save Parking Location")
+                }
+                state.manualSaveMessage?.let { message ->
+                    Text(message, style = MaterialTheme.typography.bodyMedium)
+                }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

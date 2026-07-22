@@ -87,6 +87,11 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb shell monkey -p com.zishan.parkingdetection 1
 ```
 
+
+## Manual parking accuracy
+
+Manual parking only saves a fresh **Precise location** reading. The app requests foreground precise-location permission when the button is tapped, waits up to 20 seconds for Fused Location Provider accuracy, and refuses to save readings worse than 35 metres. It never substitutes a default city or stale coordinate. If saving is refused, enable precise location, turn on GPS, move outdoors, and retry.
+
 ## Permissions
 
 The Android app declares foreground/background location, activity recognition, Bluetooth, notification, and foreground-service permissions. Permissions must be requested incrementally in the UI; manual parking should continue to work with optional background permissions denied.
