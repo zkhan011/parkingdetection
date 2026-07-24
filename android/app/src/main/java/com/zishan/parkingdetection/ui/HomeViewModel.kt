@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zishan.parkingdetection.data.database.DetectionMethodEntity
+import com.zishan.parkingdetection.data.detection.SpeedParkingMonitor
 import com.zishan.parkingdetection.data.database.ParkingLocationEntity
 import com.zishan.parkingdetection.data.location.AddressResolver
 import com.zishan.parkingdetection.data.location.LocationProvider
@@ -18,10 +19,12 @@ import com.zishan.parkingdetection.data.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -31,24 +34,62 @@ class HomeViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val locationProvider: LocationProvider,
     private val addressResolver: AddressResolver,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val speedParkingMonitor: SpeedParkingMonitor
 ) : ViewModel() {
     private val manualSaveState = MutableStateFlow(ManualSaveState())
+    private val automaticDetectionStatus = MutableStateFlow("Waiting for a driving session")
+    private var automaticMonitoringJob: Job? = null
+
+    init {
+        startAutomaticParkingMonitoring()
+    }
 
     val uiState: StateFlow<HomeUiState> = combine(
         repository.observeCurrent(),
         repository.observeHistory(),
         settingsRepository.settings,
-        manualSaveState
-    ) { current, history, settings, manualSave ->
+        manualSaveState,
+        automaticDetectionStatus
+    ) { current, history, settings, manualSave, detectionStatus ->
         HomeUiState(
             current = current,
             history = history,
             settings = settings,
             manualSaveMessage = manualSave.message,
-            isSavingManualParking = manualSave.isSaving
+            isSavingManualParking = manualSave.isSaving,
+            automaticDetectionStatus = detectionStatus
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+
+    fun startAutomaticParkingMonitoring() {
+        if (automaticMonitoringJob?.isActive == true) return
+        automaticMonitoringJob = viewModelScope.launch {
+            locationProvider.locationUpdates().combine(settingsRepository.settings) { location, settings ->
+                location to settings
+            }.collect { (location, settings) ->
+                val candidate = speedParkingMonitor.onLocation(location, settings)
+                if (candidate == null) {
+                    automaticDetectionStatus.value = if (settings.automaticDetectionEnabled) {
+                        "Monitoring driving speed for parking"
+                    } else {
+                        "Automatic detection disabled"
+                    }
+                    return@collect
+                }
+                val address = addressResolver.resolve(candidate.location.latitude, candidate.location.longitude)
+                    ?: "Address unavailable — coordinates saved"
+                repository.saveParking(
+                    latitude = candidate.location.latitude,
+                    longitude = candidate.location.longitude,
+                    address = address,
+                    method = DetectionMethodEntity.SPEED_AND_LOCATION,
+                    confidence = candidate.confidence
+                )
+                automaticDetectionStatus.value = "Parking detected from speed and dwell time"
+            }
+        }
+    }
 
     fun saveManualParking() = viewModelScope.launch {
         manualSaveState.value = ManualSaveState(message = "Finding an accurate GPS location…", isSaving = true)
@@ -82,6 +123,10 @@ class HomeViewModel @Inject constructor(
                 manualSaveState.value = ManualSaveState(message = "Received an invalid location. Please try again.")
             }
         }
+    }
+
+    fun onPreciseLocationPermissionGranted() {
+        startAutomaticParkingMonitoring()
     }
 
     fun onPreciseLocationPermissionDenied() {
@@ -125,7 +170,8 @@ data class HomeUiState(
     val currentActivity: String = "Unknown",
     val bluetoothStatus: String = "No vehicle connected",
     val manualSaveMessage: String? = null,
-    val isSavingManualParking: Boolean = false
+    val isSavingManualParking: Boolean = false,
+    val automaticDetectionStatus: String = "Waiting for a driving session"
 )
 
 private data class ManualSaveState(

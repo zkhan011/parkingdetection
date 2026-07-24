@@ -3,7 +3,7 @@ package com.zishan.parkingdetection.data.database
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-enum class DetectionMethodEntity { MANUAL, ACTIVITY_TRANSITION, BLUETOOTH_DISCONNECT, COMBINED_SIGNALS }
+enum class DetectionMethodEntity { MANUAL, ACTIVITY_TRANSITION, BLUETOOTH_DISCONNECT, SPEED_AND_LOCATION, COMBINED_SIGNALS }
 
 @Entity(tableName = "parking_locations")
 data class ParkingLocationEntity(

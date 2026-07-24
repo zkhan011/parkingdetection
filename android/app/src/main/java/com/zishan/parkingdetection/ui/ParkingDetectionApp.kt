@@ -8,6 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -70,7 +76,10 @@ fun HomeScreen(
     val preciseLocationPermission = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) viewModel.saveManualParking()
+        if (granted) {
+            viewModel.onPreciseLocationPermissionGranted()
+            viewModel.saveManualParking()
+        }
         else viewModel.onPreciseLocationPermissionDenied()
     }
     val saveParking = {
@@ -88,6 +97,7 @@ fun HomeScreen(
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Detection status", fontWeight = FontWeight.Bold)
                         Text(if (state.settings.automaticDetectionEnabled) "Automatic detection enabled" else "Automatic detection disabled")
+                        Text(state.automaticDetectionStatus)
                         Text("Activity: ${state.currentActivity}")
                         Text("Bluetooth: ${state.bluetoothStatus}")
                     }
@@ -133,7 +143,7 @@ private fun ParkingDetailsCard(state: HomeUiState, viewModel: HomeViewModel) {
                 Text("Coordinates: %.5f, %.5f".format(parking.latitude, parking.longitude))
                 Text("Detection: ${parking.detectionMethod} • confidence ${parking.confidence}%")
                 Text("Distance: calculated when current location is available • walk time is approximate")
-                Text("Map preview placeholder with accuracy radius")
+                LocalParkingMap(records = state.history, currentParking = parking)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = viewModel::shareLocation) { Text("Share") }
                     OutlinedButton(onClick = viewModel::deleteCurrent) { Text("Delete") }
@@ -141,6 +151,62 @@ private fun ParkingDetailsCard(state: HomeUiState, viewModel: HomeViewModel) {
             }
         }
     }
+}
+
+@Composable
+private fun LocalParkingMap(
+    records: List<ParkingLocationEntity>,
+    currentParking: ParkingLocationEntity
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .background(Color(0xFFE8F0FE))
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val pixelsPerMeter = size.minDimension / 150f
+            repeat(5) { index ->
+                val fraction = index / 4f
+                val x = size.width * fraction
+                val y = size.height * fraction
+                drawLine(Color(0x334285F4), Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                drawLine(Color(0x334285F4), Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+            }
+            records.take(12).forEach { record ->
+                val point = mapPoint(record, currentParking, center, pixelsPerMeter, size.width, size.height)
+                drawCircle(Color(0xFF7A7D85), radius = 5f, center = point)
+            }
+            val accuracyRadius = 35f * pixelsPerMeter
+            drawCircle(Color(0x334285F4), radius = accuracyRadius, center = center)
+            drawCircle(Color(0xFF0B57D0), radius = 11f, center = center)
+            drawCircle(Color.White, radius = 4f, center = center)
+            drawCircle(Color(0xFF0B57D0), radius = 11f, center = center, style = Stroke(width = 2f))
+        }
+        Text(
+            text = "Local parking map • blue marker is your parked vehicle",
+            modifier = Modifier.padding(12.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color(0xFF174EA6)
+        )
+    }
+}
+
+private fun mapPoint(
+    record: ParkingLocationEntity,
+    current: ParkingLocationEntity,
+    center: Offset,
+    pixelsPerMeter: Float,
+    width: Float,
+    height: Float
+): Offset {
+    val metersNorth = ((record.latitude - current.latitude) * 110_540.0).toFloat()
+    val metersEast = ((record.longitude - current.longitude) * 111_320.0 * kotlin.math.cos(Math.toRadians(current.latitude))).toFloat()
+    return Offset(
+        x = (center.x + metersEast * pixelsPerMeter).coerceIn(12f, width - 12f),
+        y = (center.y - metersNorth * pixelsPerMeter).coerceIn(12f, height - 12f)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

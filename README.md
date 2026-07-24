@@ -88,6 +88,13 @@ adb shell monkey -p com.zishan.parkingdetection 1
 ```
 
 
+
+## Local parking map and speed detection
+
+The Home screen contains a local, offline schematic map that shows the current parked vehicle in blue, its accepted 35 m accuracy radius, and recent parking-history markers in grey. It does not download Google Maps tiles or require an API key.
+
+While the app is open and precise foreground location is granted, automatic detection samples balanced-power location updates. After the phone has been travelling at 15 km/h or more, the app treats speed at or below 2 km/h for 90 seconds with a 35 m or better fix as a parking candidate. The baseline confidence is 60 and existing cooldown settings prevent duplicate saves for the configured interval. This is a foreground baseline; background detection remains subject to Android permissions and system restrictions.
+
 ## Manual parking accuracy
 
 Manual parking only saves a fresh **Precise location** reading. The app requests foreground precise-location permission when the button is tapped, waits up to 20 seconds for Fused Location Provider accuracy, and refuses to save readings worse than 35 metres. It never substitutes a default city or stale coordinate. If saving is refused, enable precise location, turn on GPS, move outdoors, and retry.

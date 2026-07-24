@@ -7,12 +7,18 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.Granularity
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 @Singleton
@@ -23,11 +29,7 @@ class FusedLocationProvider @Inject constructor(
 
     @SuppressLint("MissingPermission")
     override suspend fun currentHighAccuracyLocation(): AppLocation? {
-        val hasFineLocation = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (!hasFineLocation) return null
+        if (!hasFineLocationPermission()) return null
 
         val request = CurrentLocationRequest.Builder()
             .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
@@ -37,8 +39,39 @@ class FusedLocationProvider @Inject constructor(
             .setWaitForAccurateLocation(true)
             .build()
         val cancellationToken = CancellationTokenSource()
-        return client.getCurrentLocation(request, cancellationToken.token).await()?.let {
-            AppLocation(it.latitude, it.longitude, it.accuracy, it.speed)
-        }
+        return client.getCurrentLocation(request, cancellationToken.token).await()?.toAppLocation()
     }
+
+    @SuppressLint("MissingPermission")
+    override fun locationUpdates(): Flow<AppLocation> = callbackFlow {
+        if (!hasFineLocationPermission()) {
+            close()
+            return@callbackFlow
+        }
+
+        val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 10_000)
+            .setMinUpdateIntervalMillis(5_000)
+            .setMinUpdateDistanceMeters(10f)
+            .setWaitForAccurateLocation(false)
+            .build()
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.lastLocation?.toAppLocation()?.let(::trySend)
+            }
+        }
+        client.requestLocationUpdates(request, callback, null)
+        awaitClose { client.removeLocationUpdates(callback) }
+    }
+
+    private fun hasFineLocationPermission(): Boolean = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
 }
+
+private fun android.location.Location.toAppLocation(): AppLocation = AppLocation(
+    latitude = latitude,
+    longitude = longitude,
+    accuracyMeters = accuracy,
+    speedMetersPerSecond = speed
+)
